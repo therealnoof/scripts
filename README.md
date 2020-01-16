@@ -1,2 +1,2 @@
 # scripts
-various scripts accumulated
+various scripts repo
