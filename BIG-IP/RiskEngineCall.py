@@ -13,7 +13,7 @@ import json
 from f5.bigip import ManagementRoot
 
 ### Run a call to our Risk Engine API server and place the payload into a variable
-response = requests.get("http://160.1.31.151:5000/api/people")
+response = requests.get("http://x.x.x.x:5000/api/people")
 
 ### Parse the variable JSON payload and pull the Hanscom base level status
 ### Place base level status in variable deltaLevel
@@ -26,7 +26,7 @@ lockDown = "Delta"
 print("The current FPCON level at Hanscom is: " + deltaLevel)
 
 if deltaLevel == lockDown:
-    mgmt = ManagementRoot("52.61.149.60",'admin','F5Twister!')
+    mgmt = ManagementRoot("x.x.x.x",'admin','******')
     x = mgmt.tm.util.bash.exec_cmd('run', utilCmdArgs='-c "/usr/bin/sessiondump --delete all"')
     print("FPCON level is Delta, terminating all sessions.")
     print(x.commandResult)
