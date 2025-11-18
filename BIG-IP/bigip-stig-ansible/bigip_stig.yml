@@ -1,0 +1,299 @@
+---
+###############################################
+# BIG-IP STIG Configuration Playbook
+#
+# Purpose: Apply STIG/SRG security hardening to F5 BIG-IP systems
+# Original: Michael Coleman (M.Coleman@F5.com)
+# Modified: r.eastman@f5.com (March 5, 2019)
+# Converted to Ansible: $(date +%Y)
+###############################################
+
+- name: Apply STIG Configuration to F5 BIG-IP
+  hosts: bigip
+  gather_facts: no
+  connection: local
+
+  vars_files:
+    - vars/stig_vars.yml
+
+  tasks:
+    - name: Display start banner
+      debug:
+        msg: |
+          ###############################################
+          ANSIBLE STIG - F5 BIG-IP STIG Configuration
+          ###############################################
+
+    # SSH Configuration
+    - name: Configure SSH inactivity timeout
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - modify sys sshd inactivity-timeout 900
+      delegate_to: localhost
+
+    - name: Enable SSH banner
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - modify sys sshd banner enabled
+      delegate_to: localhost
+
+    - name: Configure SSH banner text
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - "modify sys sshd banner-text \"{{ stig_banner_text }}\""
+      delegate_to: localhost
+
+    - name: Configure SSH security settings
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - |
+            modify sys sshd include "Protocol 2
+            MaxAuthTries 3
+            Ciphers aes128-ctr,aes192-ctr,aes256-ctr,aes128-cbc,aes256-cbc
+            MACs hmac-sha1,hmac-ripemd160
+            LoginGraceTime 60
+            MaxStartups 5"
+      delegate_to: localhost
+
+    # System Configuration
+    - name: Set NTP timezone to UTC
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - modify sys ntp timezone UTC
+      delegate_to: localhost
+
+    # GUI Configuration
+    - name: Enable GUI security banner
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - modify sys global-settings gui-security-banner enabled
+      delegate_to: localhost
+
+    - name: Configure GUI security banner text
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - "modify sys global-settings gui-security-banner-text \"{{ stig_banner_text }}\""
+      delegate_to: localhost
+
+    - name: Enable GUI advisory banner
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - modify sys db ui.advisory.enabled value true
+          - modify sys db ui.advisory.color value green
+          - modify sys db ui.advisory.text value "//UNCLASSIFIED//"
+      delegate_to: localhost
+
+    - name: Configure GUI preferences
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - modify sys db ui.system.preferences.advancedselection value advanced
+          - modify sys db ui.system.preferences.recordsperscreen value 100
+          - modify sys db ui.system.preferences.startscreen value network_map
+          - modify sys db ui.users.redirectsuperuserstoauthsummary value true
+      delegate_to: localhost
+
+    # DNS Configuration
+    - name: Enable DNS cache
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - modify sys db dns.cache value enable
+      delegate_to: localhost
+
+    # HTTPD Configuration
+    - name: Configure HTTPD authentication timeouts
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - modify sys httpd auth-pam-dashboard-timeout on
+          - modify sys httpd max-clients 10
+          - modify sys httpd auth-pam-idle-timeout 900
+      delegate_to: localhost
+
+    - name: Configure HTTPD SSL ciphers
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - "modify sys httpd ssl-ciphersuite 'DEFAULT:!aNULL:!eNULL:!EXPORT:!EXP:!ADH:!DES:!RC4:!RSA:!LOW:!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA:!DHE'"
+      delegate_to: localhost
+
+    - name: Configure HTTPD SSL protocol
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - "modify sys httpd ssl-protocol 'all -SSLv2 -SSLv3 -TLSv1'"
+      delegate_to: localhost
+
+    - name: Enable HTTP to HTTPS redirect
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - modify sys httpd redirect-http-to-https enabled
+      delegate_to: localhost
+
+    - name: Configure HTTPD FileETag
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - "modify sys httpd include '\"FileETag MTime Size\"'"
+      delegate_to: localhost
+
+    # Software Update Configuration
+    - name: Disable automatic software updates
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - modify sys software update auto-check disabled
+          - modify sys software update auto-phonehome disabled
+      delegate_to: localhost
+
+    # SNMP Configuration
+    - name: Remove default SNMP public community
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - modify sys snmp communities delete { comm-public }
+      delegate_to: localhost
+      ignore_errors: yes
+
+    # Logging Configuration
+    - name: Configure TMM logging
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - modify sys daemon-log-settings tmm os-log-level informational
+          - modify sys daemon-log-settings tmm ssl-log-level informational
+      delegate_to: localhost
+
+    - name: Configure MCPD logging
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - modify sys daemon-log-settings mcpd audit enabled
+          - modify sys daemon-log-settings mcpd log-level notice
+      delegate_to: localhost
+
+    # Password Policy Configuration
+    - name: Configure password expiration warning
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - modify auth password-policy expiration-warning 7
+      delegate_to: localhost
+
+    - name: Configure password max duration
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - modify auth password-policy max-duration 90
+      delegate_to: localhost
+
+    - name: Configure max login failures
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - modify auth password-policy max-login-failures 3
+      delegate_to: localhost
+
+    - name: Configure password min duration
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - modify auth password-policy min-duration 1
+      delegate_to: localhost
+
+    - name: Configure password minimum length
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - modify auth password-policy minimum-length 8
+      delegate_to: localhost
+
+    - name: Configure password memory
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - modify auth password-policy password-memory 3
+      delegate_to: localhost
+
+    - name: Enable password policy enforcement
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - modify auth password-policy policy-enforcement enabled
+      delegate_to: localhost
+
+    - name: Configure password complexity requirements
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - modify auth password-policy required-lowercase 2
+          - modify auth password-policy required-numeric 2
+          - modify auth password-policy required-special 2
+          - modify auth password-policy required-uppercase 2
+      delegate_to: localhost
+
+    # Optional Configuration (commented in original script)
+    # Uncomment and configure in vars/stig_vars.yml if needed
+
+    - name: Configure DNS servers (optional)
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - "modify sys dns name-servers add { {{ dns_servers | join(' ') }} }"
+      delegate_to: localhost
+      when: dns_servers is defined and dns_servers | length > 0
+
+    - name: Configure NTP servers (optional)
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - "modify sys ntp servers add { {{ ntp_servers | join(' ') }} }"
+      delegate_to: localhost
+      when: ntp_servers is defined and ntp_servers | length > 0
+
+    - name: Configure DNS search domains (optional)
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - "modify sys dns search add { {{ dns_search_domains | join(' ') }} }"
+      delegate_to: localhost
+      when: dns_search_domains is defined and dns_search_domains | length > 0
+
+    - name: Configure client SSL profile ciphers (optional)
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - "modify ltm profile client-ssl clientssl ciphers {{ client_ssl_ciphers }}"
+      delegate_to: localhost
+      when: client_ssl_ciphers is defined
+
+    - name: Configure server SSL profile ciphers (optional)
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - "modify ltm profile server-ssl serverssl ciphers {{ server_ssl_ciphers }}"
+      delegate_to: localhost
+      when: server_ssl_ciphers is defined
+
+    - name: Create management route for NTP servers (optional)
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - "create sys management-route ntpservers network {{ ntp_network }} gateway {{ ntp_gateway }}"
+      delegate_to: localhost
+      when: ntp_network is defined and ntp_gateway is defined
+      ignore_errors: yes
+
+    - name: Display completion message
+      debug:
+        msg: "Configuration Complete - STIG hardening applied successfully"

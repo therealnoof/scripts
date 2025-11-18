@@ -1,0 +1,39 @@
+---
+###############################################
+# BIG-IP Inventory Example
+###############################################
+
+all:
+  children:
+    bigip:
+      hosts:
+        # Single BIG-IP example
+        bigip-01:
+          ansible_host: 192.168.1.10
+          bigip_username: admin
+          bigip_password: admin
+
+        # Additional BIG-IP devices (uncomment to use)
+        # bigip-02:
+        #   ansible_host: 192.168.1.11
+        #   bigip_username: admin
+        #   bigip_password: admin
+
+        # bigip-03:
+        #   ansible_host: 192.168.1.12
+        #   bigip_username: admin
+        #   bigip_password: admin
+
+      vars:
+        # Common variables for all BIG-IP devices
+        ansible_connection: local
+        ansible_python_interpreter: /usr/bin/python3
+
+# Alternative: Using Ansible Vault for secure credentials
+# To encrypt passwords:
+#   ansible-vault encrypt_string 'your_password_here' --name 'bigip_password'
+# Then replace the plaintext password above with the encrypted string
+
+# Group variables can also be defined in:
+#   group_vars/bigip.yml
+#   host_vars/bigip-01.yml

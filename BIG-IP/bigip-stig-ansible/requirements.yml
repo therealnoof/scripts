@@ -1,0 +1,15 @@
+---
+###############################################
+# Ansible Collections Requirements
+###############################################
+
+collections:
+  # F5 Networks BIG-IP collection
+  # Documentation: https://clouddocs.f5.com/products/orchestration/ansible/devel/
+  - name: f5networks.f5_modules
+    version: ">=1.25.0"
+
+  # Alternative: F5 BIG-IP collection (newer)
+  # Uncomment if using the newer collection structure
+  # - name: f5networks.f5_bigip
+  #   version: ">=1.0.0"

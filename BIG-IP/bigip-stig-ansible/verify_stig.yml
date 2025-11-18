@@ -1,0 +1,162 @@
+---
+###############################################
+# BIG-IP STIG Configuration Verification Playbook
+#
+# Purpose: Verify STIG configurations have been applied correctly
+###############################################
+
+- name: Verify BIG-IP STIG Configuration
+  hosts: bigip
+  gather_facts: no
+  connection: local
+
+  vars_files:
+    - vars/stig_vars.yml
+
+  tasks:
+    - name: Display verification start banner
+      debug:
+        msg: |
+          ###############################################
+          BIG-IP STIG Configuration Verification
+          ###############################################
+
+    - name: Gather SSH configuration
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - list sys sshd
+      delegate_to: localhost
+      register: ssh_config
+
+    - name: Display SSH configuration
+      debug:
+        msg: "{{ ssh_config.stdout_lines }}"
+
+    - name: Gather password policy
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - list auth password-policy
+      delegate_to: localhost
+      register: password_policy
+
+    - name: Display password policy
+      debug:
+        msg: "{{ password_policy.stdout_lines }}"
+
+    - name: Gather HTTPD configuration
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - list sys httpd
+      delegate_to: localhost
+      register: httpd_config
+
+    - name: Display HTTPD configuration
+      debug:
+        msg: "{{ httpd_config.stdout_lines }}"
+
+    - name: Gather global settings
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - list sys global-settings
+      delegate_to: localhost
+      register: global_settings
+
+    - name: Display global settings
+      debug:
+        msg: "{{ global_settings.stdout_lines }}"
+
+    - name: Gather GUI advisory settings
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - list sys db ui.advisory.enabled
+          - list sys db ui.advisory.color
+          - list sys db ui.advisory.text
+      delegate_to: localhost
+      register: advisory_settings
+
+    - name: Display advisory settings
+      debug:
+        msg: "{{ advisory_settings.stdout_lines }}"
+
+    - name: Gather NTP configuration
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - list sys ntp
+      delegate_to: localhost
+      register: ntp_config
+
+    - name: Display NTP configuration
+      debug:
+        msg: "{{ ntp_config.stdout_lines }}"
+
+    - name: Gather logging configuration
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - list sys daemon-log-settings
+      delegate_to: localhost
+      register: logging_config
+
+    - name: Display logging configuration
+      debug:
+        msg: "{{ logging_config.stdout_lines }}"
+
+    - name: Gather SNMP configuration
+      bigip_command:
+        provider: "{{ provider }}"
+        commands:
+          - list sys snmp communities
+      delegate_to: localhost
+      register: snmp_config
+      ignore_errors: yes
+
+    - name: Display SNMP configuration
+      debug:
+        msg: "{{ snmp_config.stdout_lines }}"
+
+    - name: Create verification summary
+      debug:
+        msg: |
+          ###############################################
+          Verification Complete
+          ###############################################
+
+          Review the output above to ensure:
+
+          SSH Configuration:
+          - Inactivity timeout: 900 seconds
+          - Banner enabled: yes
+          - Protocol 2 only
+          - MaxAuthTries: 3
+
+          Password Policy:
+          - Minimum length: 8
+          - Max duration: 90 days
+          - Max login failures: 3
+          - Required lowercase: 2
+          - Required uppercase: 2
+          - Required numeric: 2
+          - Required special: 2
+
+          HTTPD Configuration:
+          - Auth PAM idle timeout: 900
+          - Max clients: 10
+          - SSL protocol: all -SSLv2 -SSLv3 -TLSv1
+          - Redirect HTTP to HTTPS: enabled
+
+          Global Settings:
+          - GUI security banner: enabled
+
+          NTP:
+          - Timezone: UTC
+
+          SNMP:
+          - comm-public: should not be present
+
+          ###############################################
